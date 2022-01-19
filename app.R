@@ -32,6 +32,10 @@ ui <- fluidPage(
                    value = 10,min = 1),
       numericInput("obsucc", "Counts of success trails:",
                    value = 1, min = 0),
+      selectInput("sideTest", "Side of your test:",
+                  choices = c("Two-sided", "One-sided Greater", "One-sided Less"),
+                  selected = "Two-sided"),
+      textOutput("res"),
       verbatimTextOutput("pValRes"),
       verbatimTextOutput("asympvalRes")
     ),
@@ -60,27 +64,66 @@ server <- function(input, output) {
   df <- reactive(data.frame(x=num_succ(), y=prob()))
   exp_x <- reactive(hypoProb()*sampSize())
   # Exact p-value
-  exc_p <- reactive(1-sum(prob()[c(which(prob() > prob()[obSucc()+1]))]))
+  ## Two-sided
+  exc_p <- reactive(max(1-sum(prob()[c(which(prob() > prob()[obSucc()+1]))]),0))
+  ## One-sided Greater
+  exc_p_one_g <- reactive(max(sum(prob()[seq(obSucc()+1, length(prob()),1)]),0))
+  ## One-sided Less
+  exc_p_one_l <- reactive(max(sum(prob()[seq(1, obSucc()+1,1)]),0))
   # Asy p-value
+  ## Two-sided
   asy_p <- reactive(2*(1-pnorm(abs((obSucc()-exp_x())/sqrt(exp_x()*(1-hypoProb()))))))
+  ## One-sided Greater
+  asy_p_one_g <- reactive(1-(pnorm((obSucc()-exp_x())/sqrt(exp_x()*(1-hypoProb())))))
+  ## One-sided Less
+  asy_p_one_l <- reactive((pnorm((obSucc()-exp_x())/sqrt(exp_x()*(1-hypoProb())))))
   
   output$refDistPlot <- renderPlot({
-    ggplot(df(), aes(x = x, y = y)) + geom_bar(stat = "identity", col = "pink", fill = "pink")+
-      stat_function(fun = dnorm, args = list(mean = exp_x(), sd = sqrt(exp_x()*(1-hypoProb()))))+
-      scale_y_continuous(expand = c(0.01, 0)) + xlab("x") + ylab("Density") +
-      labs(title = "dbinom(x, 20, 0.5)") + theme_bw(16, "serif") +
-      theme(plot.title = element_text(size = rel(1.2), vjust = 1.5))
+    ggplot(df(), aes(x = x, y = y)) + 
+      geom_bar(aes(fill = "Binomal"), stat = "identity" )+
+      stat_function(fun = dnorm, args = list(mean = exp_x(), sd = sqrt(exp_x()*(1-hypoProb()))), 
+                    mapping = aes(col = "Normal"), size = 1)+
+      scale_y_continuous(expand = c(0.01, 0)) +
+      scale_fill_manual("", values = c("Binomal" = "pink")) +
+      scale_colour_manual("", values = c("Normal" = "aquamarine4"))+
+      xlab("Counts of success trials(X)") + 
+      ylab("Density") +
+      labs(title = paste0("Binomal(",sampSize(),",", hypoProb(),")")) + 
+      theme_bw(16, "serif") +
+      theme(plot.title = element_text(size = rel(1.2), vjust = 1.5),
+            legend.key = element_blank(),
+            legend.title = element_blank(),
+            legend.box = "horizontal",
+            legend.position = "top")
     #ggplotly(plt)
   }, res = 96)
   
+  output$res <- renderText("Comparison of p-value")
+  
   output$pValRes <- renderPrint({
     print("Exact p-value");
-    exc_p()
+    if (input$sideTest == "Two-sided"){
+      exc_p()
+    }
+    else if (input$sideTest == "One-sided Greater"){
+      exc_p_one_g()
+    }
+    else {
+      exc_p_one_l()
+    }
   })
   
   output$asympvalRes <- renderPrint({
     print("asymptotic p-value");
-    asy_p()
+    if (input$sideTest == "Two-sided"){
+      asy_p()
+    }
+    else if (input$sideTest == "One-sided Greater"){
+      asy_p_one_g()
+    }
+    else {
+      asy_p_one_l()
+    }
   })
 }
 
