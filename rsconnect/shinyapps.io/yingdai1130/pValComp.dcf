@@ -5,9 +5,9 @@ account: yingdai1130
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5458832
-bundleId: 5479343
+bundleId: 5558652
 url: https://yingdai1130.shinyapps.io/pValComp/
-when: 1642474907.75405
-lastSyncTime: 1642474907.75405
+when: 1644361272.59388
+lastSyncTime: 1644361272.59388
 asMultiple: FALSE
 asStatic: FALSE
